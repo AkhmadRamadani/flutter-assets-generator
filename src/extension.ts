@@ -93,7 +93,6 @@ function generateAssets() {
     const outputPath = path.join(rootPath, config.output_path);
     const filename = config.filename || 'assets.dart';
     const classname = config.classname || 'Assets';
-    const fieldPrefix = config.field_prefix === undefined ? 'assets' : config.field_prefix;
     const packageName = config.package_name;
 
     // Create output directory if it doesn't exist
@@ -114,8 +113,19 @@ function generateAssets() {
     output += `  ${classname}._();\n\n`;
 
     for (const assetPath of assetPaths) {
-      const relativePath = path.relative(rootPath, assetPath).replace(/\\/g, '/');
-      const variableName = generateVariableName(relativePath, fieldPrefix);
+      const relativePath = path.relative(rootPath, assetPath).replace(/\\\\/g, '/');
+
+      // Strip the assets_path prefix for naming
+      let namePath = relativePath;
+      for (const ap of assetsPaths) {
+        const prefix = ap.endsWith('/') ? ap : ap + '/';
+        if (relativePath.startsWith(prefix)) {
+          namePath = relativePath.substring(prefix.length);
+          break;
+        }
+      }
+
+      const variableName = generateVariableName(namePath);
       const packagePath = packageName ? `packages/${packageName}/${relativePath}` : relativePath;
 
       if (!config.ignore_comments) {
@@ -174,16 +184,8 @@ function toCamelCase(str: string): string {
     .join('');
 }
 
-function generateVariableName(relativePath: string, prefix: string): string {
-  let namePath = relativePath;
-
-  if (prefix) {
-    const prefixDir = prefix.endsWith('/') ? prefix : prefix + '/';
-    if (namePath.startsWith(prefixDir)) {
-      namePath = namePath.substring(prefixDir.length);
-    }
-  }
-
+function generateVariableName(namePath: string): string {
+  // Remove extension
   const lastDot = namePath.lastIndexOf('.');
   if (lastDot > 0) {
     namePath = namePath.substring(0, lastDot);
