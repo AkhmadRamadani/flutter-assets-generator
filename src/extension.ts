@@ -119,7 +119,7 @@ function generateAssets() {
       const packagePath = packageName ? `packages/${packageName}/${relativePath}` : relativePath;
 
       if (!config.ignore_comments) {
-        output += `  /// Assets for ${path.basename(assetPath, path.extname(assetPath))}\n`;
+        output += `  /// Assets for ${variableName}\\n`;
         output += `  /// ${packagePath}\n`;
       }
       output += `  static const String ${variableName} = "${packagePath}";\n\n`;
