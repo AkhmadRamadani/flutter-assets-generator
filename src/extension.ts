@@ -134,11 +134,16 @@ function generateAssets() {
   }
 }
 
+const IGNORED_FILES = ['.DS_Store', 'Thumbs.db', '.gitkeep'];
+
 function getAllFiles(dirPath: string): string[] {
   const files: string[] = [];
   const entries = fs.readdirSync(dirPath, { withFileTypes: true });
 
   for (const entry of entries) {
+    if (IGNORED_FILES.includes(entry.name)) {
+      continue;
+    }
     const fullPath = path.join(dirPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...getAllFiles(fullPath));
@@ -150,20 +155,50 @@ function getAllFiles(dirPath: string): string[] {
   return files;
 }
 
-function generateVariableName(path: string, prefix: string): string {
-  const parts = path.split('/');
-  const fileName = parts[parts.length - 1];
-  const nameWithoutExt = fileName.split('.')[0];
-  
-  let variableName = nameWithoutExt
-    .replace(/[^a-zA-Z0-9]/g, '_')
-    .replace(/^[0-9]/, '_$&');
+function toCamelCase(str: string): string {
+  return str
+    .split(/[_\-\.]+/)
+    .filter(p => p.length > 0)
+    .map((part, i) => {
+      if (/^[0-9]+$/.test(part)) {
+        return part;
+      }
+      if (i > 0 && /^[A-Z]+$/.test(part)) {
+        return part;
+      }
+      if (i === 0) {
+        return part.toLowerCase();
+      }
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join('');
+}
+
+function generateVariableName(relativePath: string, prefix: string): string {
+  let namePath = relativePath;
 
   if (prefix) {
-    variableName = prefix + variableName;
+    const prefixDir = prefix.endsWith('/') ? prefix : prefix + '/';
+    if (namePath.startsWith(prefixDir)) {
+      namePath = namePath.substring(prefixDir.length);
+    }
   }
 
-  return variableName;
+  const lastDot = namePath.lastIndexOf('.');
+  if (lastDot > 0) {
+    namePath = namePath.substring(0, lastDot);
+  }
+
+  const parts = namePath.split('/').filter(p => p.length > 0);
+  const camelParts = parts.map((part, i) => {
+    const camel = toCamelCase(part);
+    if (i === 0) {
+      return camel;
+    }
+    return camel.charAt(0).toUpperCase() + camel.slice(1);
+  });
+
+  return camelParts.join('');
 }
 
 export function deactivate() {
